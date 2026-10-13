@@ -25,6 +25,8 @@ public class ClassConfiguration : IEntityTypeConfiguration<Class>
             .WithMany()
             .HasForeignKey(x => x.RoomId);
 
-        builder.HasQueryFilter(x => !x.IsCancelled);
+        builder.HasIndex(x => new { x.StartsAt, x.Id });
+
+        // решение: фильтр прятал отменённое занятие, из-за него 409 превращался в 404.
     }
 }

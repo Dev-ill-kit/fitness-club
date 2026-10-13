@@ -16,6 +16,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Email).HasColumnName("email").IsRequired();
         builder.Property(x => x.PasswordHash).HasColumnName("password_hash").IsRequired();
         builder.Property(x => x.Role).HasColumnName("role").IsRequired();
+        builder.Property(x => x.CardVersion).HasColumnName("card_version").HasDefaultValue(0L);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
     }
 }

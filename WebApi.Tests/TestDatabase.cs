@@ -40,10 +40,10 @@ public static class TestDatabase
             Database = _databaseName
         }.ConnectionString;
 
-        await FlushCacheAsync();
+        await ResetRedisAsync();
     }
 
-    private static async Task FlushCacheAsync()
+    public static async Task ResetRedisAsync()
     {
         var options = ConfigurationOptions.Parse(RedisConnectionString);
         options.AllowAdmin = true;
