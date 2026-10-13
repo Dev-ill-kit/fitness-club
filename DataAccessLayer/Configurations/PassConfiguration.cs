@@ -21,5 +21,7 @@ public class PassConfiguration : IEntityTypeConfiguration<Pass>
             .HasOne<User>()
             .WithMany()
             .HasForeignKey(x => x.UserId);
+
+        builder.HasIndex(x => x.UserId).IsUnique();
     }
 }

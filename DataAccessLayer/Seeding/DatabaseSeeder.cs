@@ -160,11 +160,13 @@ public static class DatabaseSeeder
                 pass.RemainingVisits -= seats;
             }
 
+            // решение: в сиде у отменённых посещения не списывались, refunded_visits оставляю 0.
             enrollments.Add(new Enrollment
             {
                 UserId = user.Id,
                 ClassId = scheduledClass.Id,
                 Seats = seats,
+                RefundedVisits = 0,
                 Status = cancelled ? "cancelled" : "active",
                 CreatedAt = createdAt,
                 CancelledAt = cancelled
@@ -207,6 +209,7 @@ public static class DatabaseSeeder
                     UserId = donor.UserId,
                     ClassId = scheduledClass.Id,
                     Seats = seats,
+                    RefundedVisits = 0,
                     Status = "active",
                     CreatedAt = CreatedBefore(scheduledClass.StartsAt, now, random),
                     CancelledAt = null
@@ -244,6 +247,7 @@ public static class DatabaseSeeder
                     UserId = donor.UserId,
                     ClassId = scheduledClass.Id,
                     Seats = 1,
+                    RefundedVisits = 0,
                     Status = "active",
                     CreatedAt = CreatedBefore(scheduledClass.StartsAt, now, random),
                     CancelledAt = null

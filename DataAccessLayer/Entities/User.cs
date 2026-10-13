@@ -12,5 +12,7 @@ public class User : IEntity
 
     public string Role { get; set; } = null!;
 
+    public long CardVersion { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
