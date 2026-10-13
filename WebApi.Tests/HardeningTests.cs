@@ -297,6 +297,48 @@ public class HardeningTests : ApiTestBase
     }
 
     [TestMethod]
+    public async Task CachedCardShowsClubCancellation()
+    {
+        var token = await TokenAsync("user177@club.test");
+        var classId = await InsertClassAsync(TestClock.Shared.UtcNow.AddDays(4), 6);
+        using var created = await EnrollAsync(token, classId, 1, "stale-card");
+        var id = (await ReadAsync(created)).GetProperty("id").GetInt64();
+        using var first = await SendAsync(HttpMethod.Get, $"/enrollments/{id}", token: token);
+        Assert.IsFalse((await ReadAsync(first)).GetProperty("class").GetProperty("isCancelled").GetBoolean());
+
+        await InDbAsync(async db =>
+        {
+            var scheduled = await db.Classes.SingleAsync(x => x.Id == classId);
+            scheduled.IsCancelled = true;
+            await db.SaveChangesAsync();
+        });
+
+        using var second = await SendAsync(HttpMethod.Get, $"/enrollments/{id}", token: token);
+        var body = await ReadAsync(second);
+        Assert.AreEqual(HttpStatusCode.OK, second.StatusCode, body.ToString());
+        Assert.IsTrue(body.GetProperty("class").GetProperty("isCancelled").GetBoolean(), body.ToString());
+    }
+
+    [TestMethod]
+    public async Task NonNumericClassIdInBodyIsInvalidRequest()
+    {
+        var token = await TokenAsync("user178@club.test");
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            "/enrollments",
+            """{"classId":"abc","seats":1}""",
+            token,
+            "bad-class");
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, text);
+        var body = JsonDocument.Parse(text).RootElement;
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType!.MediaType, text);
+        Assert.AreEqual("Invalid request", body.GetProperty("title").GetString(), text);
+        Assert.IsFalse(body.TryGetProperty("reason", out _), text);
+        Assert.IsFalse(body.TryGetProperty("errors", out _), text);
+    }
+
+    [TestMethod]
     public async Task InvalidRequestHasNoReasonField()
     {
         var token = await TokenAsync("user105@club.test");

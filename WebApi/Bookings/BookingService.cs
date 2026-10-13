@@ -266,7 +266,7 @@ public class BookingService
             .SingleAsync(ct);
         var cached = await _cache.TryGetAsync(userId, enrollmentId, version, ct);
 
-        if (cached != null)
+        if (cached != null && await ClassCancellationMatchesAsync(cached, ct))
         {
             return BookingResult.Ok(StatusCodes.Status200OK, cached);
         }
@@ -490,6 +490,17 @@ public class BookingService
                 CreatedAt = now
             });
         }
+    }
+
+    private async Task<bool> ClassCancellationMatchesAsync(EnrollmentCardResponse cached, CancellationToken ct)
+    {
+        var cancelled = await _db.Classes.AsNoTracking()
+            .Where(x => x.Id == cached.Class.Id)
+            .Select(x => (bool?)x.IsCancelled)
+            .SingleOrDefaultAsync(ct);
+
+        // решение: отмену клубом в версию брони не пишу, флаг сверяю с базой, иначе карточка врет до конца TTL.
+        return cancelled == cached.Class.IsCancelled;
     }
 
     private async Task<long> TakenSeatsAsync(long classId, CancellationToken ct)
