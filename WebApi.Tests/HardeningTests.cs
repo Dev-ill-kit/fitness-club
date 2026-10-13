@@ -320,6 +320,38 @@ public class HardeningTests : ApiTestBase
     }
 
     [TestMethod]
+    public async Task CachedCardShowsMovedClass()
+    {
+        var token = await TokenAsync("user174@club.test");
+        var classId = await InsertClassAsync(TestClock.Shared.UtcNow.AddDays(5), 6);
+        using var created = await EnrollAsync(token, classId, 1, "moved-class");
+        var id = (await ReadAsync(created)).GetProperty("id").GetInt64();
+        using var first = await SendAsync(HttpMethod.Get, $"/enrollments/{id}", token: token);
+        Assert.AreEqual(HttpStatusCode.OK, first.StatusCode);
+        var movedTo = TestClock.Shared.UtcNow.AddDays(9);
+
+        await InDbAsync(async db =>
+        {
+            var scheduled = await db.Classes.SingleAsync(x => x.Id == classId);
+            scheduled.StartsAt = movedTo;
+            scheduled.Title = "Moved";
+            scheduled.DurationMinutes = 45;
+            await db.SaveChangesAsync();
+        });
+
+        using var second = await SendAsync(HttpMethod.Get, $"/enrollments/{id}", token: token);
+        var body = await ReadAsync(second);
+        var scheduledClass = body.GetProperty("class");
+        Assert.AreEqual(HttpStatusCode.OK, second.StatusCode, body.ToString());
+        Assert.AreEqual(
+            movedTo,
+            scheduledClass.GetProperty("startsAt").GetDateTime().ToUniversalTime(),
+            body.ToString());
+        Assert.AreEqual("Moved", scheduledClass.GetProperty("title").GetString(), body.ToString());
+        Assert.AreEqual(45, scheduledClass.GetProperty("durationMinutes").GetInt32(), body.ToString());
+    }
+
+    [TestMethod]
     public async Task NonNumericClassIdInBodyIsInvalidRequest()
     {
         var token = await TokenAsync("user178@club.test");
